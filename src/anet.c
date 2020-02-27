@@ -533,6 +533,7 @@ static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *l
     while(1) {
         fd = accept(s,sa,len);
         if (fd == -1) {
+            // 此处判断了EINTER, 那么表明fd是非阻塞的
             if (errno == EINTR)
                 continue;
             else {
@@ -550,6 +551,7 @@ static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *l
  */
 int anetTcpAccept(char *err, int s, char *ip, size_t ip_len, int *port) {
     int fd;
+    // 使用sockaddr_storage 支持ipv6的地址
     struct sockaddr_storage sa;
     socklen_t salen = sizeof(sa);
     if ((fd = anetGenericAccept(err,s,(struct sockaddr*)&sa,&salen)) == -1)

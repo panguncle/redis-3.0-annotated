@@ -166,15 +166,18 @@ void aeStop(aeEventLoop *eventLoop) {
 /*
  * 根据 mask 参数的值，监听 fd 文件的状态，
  * 当 fd 可用时，执行 proc 函数
+ * 将给定套接字的给定事件加入到I/O多路复用程序的监听范围内
  */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
     if (fd >= eventLoop->setsize) {
+        // ERANGE Result too large
         errno = ERANGE;
         return AE_ERR;
     }
 
+    // Todo: 这里不对吧, 前面不是刚刚判断过吗, 怎么这里又判断
     if (fd >= eventLoop->setsize) return AE_ERR;
 
     // 取出文件事件结构
@@ -204,16 +207,28 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
  */
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask)
 {
+    // fd 超过了setsize, 即应该是一个不合理的fd
     if (fd >= eventLoop->setsize) return;
 
     // 取出文件事件结构
     aeFileEvent *fe = &eventLoop->events[fd];
 
     // 未设置监听的事件类型，直接返回
+    // Todo: 这个mask
+    /**
+     * mask取值如下:
+    #define AE_NONE 0    // 未设置
+    #define AE_READABLE 1 // 可读
+    #define AE_WRITABLE 2 // 可写
+     */
+     // AE_NONE: 删无可删
     if (fe->mask == AE_NONE) return;
 
     // 计算新掩码
     fe->mask = fe->mask & (~mask);
+    // 如果这个fd是maxfd, 并且, mask已经被置为AE_NONE, 那么就是意味着
+    // 这个maxfd要被删除了, 所以就更换掉maxfd
+    // 更换的策略: 从maxfd往前找, 找到那个最大的fd, 并且fd的mask不为AE_NONE；
     if (fd == eventLoop->maxfd && fe->mask == AE_NONE) {
         /* Update the max fd */
         int j;
@@ -500,12 +515,19 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
     int processed = 0, numevents;
 
     /* Nothing to do? return ASAP */
+    // ASAP: 应该是理解为： as soon as possible
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
     /* Note that we want call select() even if there are no
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
      * to fire. */
+    /**
+     * 此处会调用select()方法, 即便没有文件事件需要处理, 也可以用来等待下一次时间事件就绪
+     * Todo: 条件如何解读
+     * maxfd != -1 => 处理文件事件
+     * 或者 AE_TIME_EVENTS && !AE_DONT_WAIT: 处理时间事件, 且不会要求不等待
+     */
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;
@@ -569,10 +591,13 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
            /* note the fe->mask & mask & ... code: maybe an already processed
              * event removed an element that fired and we still didn't
              * processed, so we check if the event is still valid. */
+           // 这里说明 fired中存储的events可能在 events中已经被删除了
+           // 如果被删除了就不要去处理他
             // 读事件
             if (fe->mask & mask & AE_READABLE) {
                 // rfired 确保读/写事件只能执行其中一个
                 rfired = 1;
+                // Todo: 这里没有错的话应该就是单线程执行的回调函数的地方了
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
             // 写事件
@@ -599,18 +624,24 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
  * 在给定毫秒内等待，直到 fd 变成可写、可读或异常
  */
 int aeWait(int fd, int mask, long long milliseconds) {
+    // Todo: 为什么aeWait要使用poll??
     struct pollfd pfd;
     int retmask = 0, retval;
 
+    // memset(void * s, int ch, size_t n);
     memset(&pfd, 0, sizeof(pfd));
     pfd.fd = fd;
     if (mask & AE_READABLE) pfd.events |= POLLIN;
     if (mask & AE_WRITABLE) pfd.events |= POLLOUT;
 
+    // poll == 0, 无socket描述符准备好读, 写, 或者出错; (超时)
+    // > 0, 可读的文件数
+    // -1 调用失败, 自动设置全局errno
     if ((retval = poll(&pfd, 1, milliseconds))== 1) {
         if (pfd.revents & POLLIN) retmask |= AE_READABLE;
         if (pfd.revents & POLLOUT) retmask |= AE_WRITABLE;
-	if (pfd.revents & POLLERR) retmask |= AE_WRITABLE;
+        // Todo: POLLERR和POLLHUB为什么要设定为AE_WRITEABLE;
+	    if (pfd.revents & POLLERR) retmask |= AE_WRITABLE;
         if (pfd.revents & POLLHUP) retmask |= AE_WRITABLE;
         return retmask;
     } else {

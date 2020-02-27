@@ -794,6 +794,8 @@ static void acceptCommonHandler(int fd, int flags) {
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[REDIS_IP_STR_LEN];
+    // Todo: 这个宏是什么用的
+    // 如何达到提醒的效果
     REDIS_NOTUSED(el);
     REDIS_NOTUSED(mask);
     REDIS_NOTUSED(privdata);

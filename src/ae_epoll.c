@@ -113,7 +113,10 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 
     // 注册事件到 epoll
     ee.events = 0;
+    // merge, use | 或
     mask |= eventLoop->events[fd].mask; /* Merge old events */
+    // Todo: EPOLLIN;
+    // EPOLLOUT;
     if (mask & AE_READABLE) ee.events |= EPOLLIN;
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
     ee.data.u64 = 0; /* avoid valgrind warning */
@@ -136,6 +139,7 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
     ee.events = 0;
     if (mask & AE_READABLE) ee.events |= EPOLLIN;
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
+    // Todo: what is valgrind warning??
     ee.data.u64 = 0; /* avoid valgrind warning */
     ee.data.fd = fd;
     if (mask != AE_NONE) {
@@ -149,12 +153,14 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
 
 /*
  * 获取可执行事件
+ * 等待所有注册的事件发生, 或者超时
  */
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
     int retval, numevents = 0;
 
     // 等待时间
+    // Todo: epoll_wait函数原型
     retval = epoll_wait(state->epfd,state->events,eventLoop->setsize,
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
 
@@ -167,13 +173,15 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
         numevents = retval;
         for (j = 0; j < numevents; j++) {
             int mask = 0;
-            struct epoll_event *e = state->events+j;
+            struct epoll_event *e = state->events+j; // +j 数值名即是指针地址, +j <=> events[j]
 
             if (e->events & EPOLLIN) mask |= AE_READABLE;
+            // 这里的代码应该可以合并
             if (e->events & EPOLLOUT) mask |= AE_WRITABLE;
             if (e->events & EPOLLERR) mask |= AE_WRITABLE;
             if (e->events & EPOLLHUP) mask |= AE_WRITABLE;
 
+            // fired 表示已经触发的
             eventLoop->fired[j].fd = e->data.fd;
             eventLoop->fired[j].mask = mask;
         }
