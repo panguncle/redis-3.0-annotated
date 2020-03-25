@@ -45,6 +45,11 @@
 #ifndef __DICT_H
 #define __DICT_H
 
+
+/**
+ * PReader: Todo: 字典, 哈希表, hash table, hashMap???
+ */
+
 /*
  * 字典的操作状态
  */
@@ -60,13 +65,18 @@
 
 /*
  * 哈希表节点
+ * PReader: entry项, key->value & next
  */
 typedef struct dictEntry {
     
     // 键
+    // PReader: void * 任意类型, 在golang里面写法就类似 interface{}
     void *key;
 
     // 值
+    // PReader: 这里的值很有意思
+    // 可以是 void * 任何类型的指针,
+    // uint64_t和int64_t 又是用来存储什么东西的
     union {
         void *val;
         uint64_t u64;
@@ -74,6 +84,7 @@ typedef struct dictEntry {
     } v;
 
     // 指向下个哈希表节点，形成链表
+    // PReader: 用于将多个哈希值相同的键值对连接在一起, 以此解决键冲突的问题
     struct dictEntry *next;
 
 } dictEntry;
@@ -81,6 +92,7 @@ typedef struct dictEntry {
 
 /*
  * 字典类型特定函数
+ * PReader: 这种定义的方法就很像是golang中的interface
  */
 typedef struct dictType {
 
@@ -115,13 +127,16 @@ typedef struct dictType {
 typedef struct dictht {
     
     // 哈希表数组
+    // PReader: 指向dictEntry指针的数组, 在golang中的写法: []*dictEntry
     dictEntry **table;
 
     // 哈希表大小
+    // PReader: 即是table数组的大小
     unsigned long size;
     
     // 哈希表大小掩码，用于计算索引值
     // 总是等于 size - 1
+    // PReader: Todo: 那么总是等于size-1的用处是什么呢
     unsigned long sizemask;
 
     // 该哈希表已有节点的数量
@@ -131,6 +146,9 @@ typedef struct dictht {
 
 /*
  * 字典
+ * PReader: 加入(key,value) 如何计算index
+ * hash = dict->type->hashFunction(key);
+ * index = hash & dict->ht[x].sizemask
  */
 typedef struct dict {
 
@@ -141,6 +159,7 @@ typedef struct dict {
     void *privdata;
 
     // 哈希表
+    // 字典只使用ht[0], h[1]哈希表只在对ht[0]进行rehash使用
     dictht ht[2];
 
     // rehash 索引
