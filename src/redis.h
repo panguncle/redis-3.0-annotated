@@ -844,9 +844,11 @@ struct redisServer {
     dict *orig_commands;        /* Command table before command renaming. */
 
     // 事件状态
+    // PReader: eventLoop
     aeEventLoop *el;
 
     // 最近一次使用时钟
+    // PReader:   lruclock:REDIS_LRU_BITS => 这tm是什么神仙写法
     unsigned lruclock:REDIS_LRU_BITS; /* Clock for LRU eviction */
 
     // 关闭服务器的标识
@@ -1502,6 +1504,13 @@ typedef struct {
  * Extern declarations
  *----------------------------------------------------------------------------*/
 
+/**
+ PReader : extern http://c.biancheng.net/view/404.html
+ extern的作用:
+    1. 将下文定义的全局变量的作用域提前 (不然作用域在全局变量声明之后才生效)
+    2. 引用别的文件中声明的全局变量
+ 在这里应该是将redis.c中定义的 server 变量引用进来
+ */
 extern struct redisServer server;
 extern struct sharedObjectsStruct shared;
 extern dictType setDictType;

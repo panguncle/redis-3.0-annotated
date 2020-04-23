@@ -516,6 +516,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
     /* Nothing to do? return ASAP */
     // ASAP: 应该是理解为： as soon as possible
+    // PReader: 这里其实就是判断一下是否是 AE_TIME_EVENTS 或者 AE_FILE_EVENTS
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
     /* Note that we want call select() even if there are no
@@ -663,6 +664,9 @@ void aeMain(aeEventLoop *eventLoop) {
             eventLoop->beforesleep(eventLoop);
 
         // 开始处理事件
+        // PReader: 事件环核心处理逻辑入口
+        // AE_ALL_EVENTS => (AE_FILE_EVENTS|AE_TIME_EVENTS)
+        // 即是文件时间 & 时间事件
         aeProcessEvents(eventLoop, AE_ALL_EVENTS);
     }
 }

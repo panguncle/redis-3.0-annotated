@@ -3930,6 +3930,7 @@ void redisSetProcTitle(char *title) {
 #endif
 }
 
+// PReader: main 启动函数, good
 int main(int argc, char **argv) {
     struct timeval tv;
 
