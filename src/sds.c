@@ -71,6 +71,7 @@ sds sdsnewlen(const void *init, size_t initlen) {
     // T = O(N)
     if (init) {
         // zmalloc 不初始化所分配的内存
+        // PReader: 这里的 + 1是为什么呢? 最后
         sh = zmalloc(sizeof(struct sdshdr)+initlen+1);
     } else {
         // zcalloc 将分配的内存全部初始化为 0
@@ -124,6 +125,8 @@ sds sdsempty(void) {
  *
  * 复杂度
  *  T = O(N)
+ * 
+ * 使用 const char * 指明此处不会修改该字符串
  */
 /* Create a new sds string starting from a null termined C string. */
 sds sdsnew(const char *init) {

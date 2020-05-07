@@ -858,6 +858,11 @@ void activeExpireCycle(int type) {
     /* This function has some global state in order to continue the work
      * incrementally across calls. */
     // 静态变量，用来累积函数连续执行时的数据
+    // PReader: 
+    // @see: static变量: http://c.biancheng.net/view/301.html
+    // 局部静态变量: 值在函数调用结束之后不会消失，而仍然保留其原值。
+    // 其值存储在 静态存储区存放;
+    // 静态局部变量与全局变量的主要区别就在于可见性，静态局部变量只在其被声明的代码块中是可见的
     static unsigned int current_db = 0; /* Last DB tested. */
     static int timelimit_exit = 0;      /* Time limit hit in previous call? */
     static long long last_fast_cycle = 0; /* When last fast cycle ran. */

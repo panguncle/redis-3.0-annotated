@@ -820,9 +820,11 @@ dictEntry *dictFind(dict *d, const void *key)
     unsigned int h, idx, table;
 
     // 字典（的哈希表）为空
+    // PReader: 基本只在 ht[0]进行搜索, ht[1]用于rehash
     if (d->ht[0].size == 0) return NULL; /* We don't have a table at all */
 
     // 如果条件允许的话，进行单步 rehash
+    // PReader: 什么叫做单步rehash??
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
     // 计算键的哈希值

@@ -77,6 +77,9 @@ typedef struct dictEntry {
     // PReader: 这里的值很有意思
     // 可以是 void * 任何类型的指针,
     // uint64_t和int64_t 又是用来存储什么东西的
+    // 2020.05.06: 猜测, 应该是存储的时候使用 void * 来存储任意值
+    // 又因为这里使用的是union, 因此v中三个字段共享同一段内存, 因此读取的时候可以
+    // 使用 u64, s64来转换读出, 不用手工转换 ??
     union {
         void *val;
         uint64_t u64;

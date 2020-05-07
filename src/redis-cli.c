@@ -1843,6 +1843,9 @@ static void intrinsicLatencyMode(void) {
  * Program main()
  *--------------------------------------------------------------------------- */
 
+/**
+ PReader: redis-client main
+ */
 int main(int argc, char **argv) {
     int firstarg;
 
@@ -1872,6 +1875,12 @@ int main(int argc, char **argv) {
     config.stdinarg = 0;
     config.auth = NULL;
     config.eval = NULL;
+    /**
+     PReader:
+    int isatty(int fd);
+    The isatty() function determines if the file descriptor fd refers to a valid
+     terminal type device.
+     */
     if (!isatty(fileno(stdout)) && (getenv("FAKETTY") == NULL))
         config.output = OUTPUT_RAW;
     else

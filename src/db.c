@@ -1110,18 +1110,25 @@ void setExpire(redisDb *db, robj *key, long long when) {
  * 返回给定 key 的过期时间。
  *
  * 如果键没有设置过期时间，那么返回 -1 。
+ * 
+ * PReader: 先判定expires dict 大小大过0, 再看看key是否存在
+ * 如果key在expire字典里存在, 那么再去原字典看看对应的key是否存在
+ * 最后返回过期时间
  */
 long long getExpire(redisDb *db, robj *key) {
     dictEntry *de;
 
     /* No expire? return ASAP */
+    // ASAP: as soon as possible
     // 获取键的过期时间
     // 如果过期时间不存在，那么直接返回
+    // PReader: 这种使用#define的方式来含义函数是什么操作? 范型?
     if (dictSize(db->expires) == 0 ||
        (de = dictFind(db->expires,key->ptr)) == NULL) return -1;
 
     /* The entry was found in the expire dict, this means it should also
      * be present in the main dict (safety check). */
+    // PReader: 原来Redis也会有这种担忧, 做这种检查
     redisAssertWithInfo(NULL,key,dictFind(db->dict,key->ptr) != NULL);
 
     // 返回过期时间
@@ -1191,6 +1198,7 @@ int expireIfNeeded(redisDb *db, robj *key) {
      * only the first time it is accessed and not in the middle of the
      * script execution, making propagation to slaves / AOF consistent.
      * See issue #1525 on Github for more information. */
+    // PReader: 如果server正在使用lua脚本, 那么以lua脚本执行的时间为准, 不再重新获取时间戳
     now = server.lua_caller ? server.lua_time_start : mstime();
 
     /* If we are running in the context of a slave, return ASAP:
